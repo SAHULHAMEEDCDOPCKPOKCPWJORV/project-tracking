@@ -153,8 +153,22 @@ export default function BOQPage() {
 
                     return (
                       <tr key={item.id}>
-                        <td style={{ fontWeight:500 }}>{item.item}</td>
-                        <td style={{ color:"#64748b" }}>{item.unit}</td>
+                        <td style={{ fontWeight:500 }}>
+                          {isEdit ? (
+                            <input type="text" className="input-field"
+                              style={{ width:"100%", padding:"3px 6px", fontSize:12 }}
+                              value={item.item}
+                              onChange={e => updateItem(item.id, { item: e.target.value })}/>
+                          ) : <span>{item.item}</span>}
+                        </td>
+                        <td>
+                          {isEdit ? (
+                            <input type="text" className="input-field"
+                              style={{ width:60, padding:"3px 6px", fontSize:12 }}
+                              value={item.unit}
+                              onChange={e => updateItem(item.id, { unit: e.target.value })}/>
+                          ) : <span style={{ color:"#64748b" }}>{item.unit}</span>}
+                        </td>
                         <td>
                           {isEdit ? (
                             <input type="number" className="input-field"
@@ -163,7 +177,17 @@ export default function BOQPage() {
                               onChange={e => updateItem(item.id, { quantity:+e.target.value })}/>
                           ) : <span>{item.quantity.toFixed(2)}</span>}
                         </td>
-                        <td style={{ color:"#64748b" }}>{item.wastage}%</td>
+                        <td>
+                          {isEdit ? (
+                            <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+                              <input type="number" className="input-field"
+                                style={{ width:60, padding:"3px 6px", fontSize:12 }}
+                                value={item.wastage}
+                                onChange={e => updateItem(item.id, { wastage:+e.target.value })}/>
+                              <span style={{ fontSize:12, color:"#64748b" }}>%</span>
+                            </div>
+                          ) : <span style={{ color:"#64748b" }}>{item.wastage}%</span>}
+                        </td>
                         <td>
                           {isEdit ? (
                             <input type="number" className="input-field"
@@ -175,7 +199,17 @@ export default function BOQPage() {
                         <td style={{ fontWeight:600, color:"#f1f5f9" }}>
                           ₹{Math.round(amt).toLocaleString("en-IN")}
                         </td>
-                        <td style={{ color:"#f59e0b" }}>{item.gst}%</td>
+                        <td>
+                          {isEdit ? (
+                            <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+                              <input type="number" className="input-field"
+                                style={{ width:60, padding:"3px 6px", fontSize:12 }}
+                                value={item.gst}
+                                onChange={e => updateItem(item.id, { gst:+e.target.value })}/>
+                              <span style={{ fontSize:12, color:"#64748b" }}>%</span>
+                            </div>
+                          ) : <span style={{ color:"#f59e0b" }}>{item.gst}%</span>}
+                        </td>
                         <td style={{ color:"#f59e0b" }}>
                           ₹{Math.round(gstAmt).toLocaleString("en-IN")}
                         </td>

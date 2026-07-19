@@ -77,7 +77,7 @@ export default function ReportsPage() {
       const boqRows = items.map(i => {
         const amt = i.quantity * (1+i.wastage/100) * i.rate;
         const gst = amt * i.gst / 100;
-        return [i.floor, i.category, i.item, i.unit, i.quantity, i.wastage, i.rate, Math.round(amt), i.gst, Math.round(gst), Math.round(amt+gst)];
+        return [i.floor, i.category, i.description, i.unit, i.quantity, i.wastage, i.rate, Math.round(amt), i.gst, Math.round(gst), Math.round(amt+gst)];
       });
       const totRow = ["","","","GRAND TOTAL","","","",
         Math.round(items.reduce((s,i)=>s+i.quantity*(1+i.wastage/100)*i.rate,0)),"",

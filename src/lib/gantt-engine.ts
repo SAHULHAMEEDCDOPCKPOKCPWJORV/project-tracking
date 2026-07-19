@@ -189,8 +189,41 @@ export function generateBOQ(project: ProjectDetails): BOQItem[] {
   const items: BOQItem[] = [];
   let counter = 1;
 
-  const add = (floor: string, category: string, item: string, unit: string, qty: number, rate: number, wastage = 5) => {
-    items.push({ id: `BOQ${counter++}`, floor, category, item, unit, quantity: qty, wastage, rate, gst: gstPercentage });
+  const add = (floor: string, category: string, description: string, unit: string, qty: number, rate: number, wastage = 5) => {
+    const amount = qty * rate;
+    const material = amount * 0.6;
+    const labour = amount * 0.3;
+    const equipment = amount * 0.1;
+    const overhead = amount * 0.05;
+    const profit = 10;
+    const gst = gstPercentage;
+    const totalCost = amount + overhead + (amount * profit / 100) + (amount * gst / 100);
+    
+    items.push({ 
+      id: `BOQ-${counter}`,
+      itemNo: `${category.substring(0, 3).toUpperCase()}-${counter}`,
+      floor, 
+      category, 
+      description,
+      specification: "Standard Spec",
+      activity: "Construction",
+      unit, 
+      quantity: qty, 
+      wastage, 
+      rate,
+      amount,
+      contractor: "Main Contractor",
+      vendor: "Local Vendor",
+      material,
+      labour,
+      equipment,
+      overhead,
+      profit,
+      gst,
+      totalCost,
+      remarks: ""
+    });
+    counter++;
   };
 
   // Foundation items (independent of floors)

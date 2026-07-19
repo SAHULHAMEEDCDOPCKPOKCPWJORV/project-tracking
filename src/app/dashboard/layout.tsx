@@ -5,19 +5,101 @@ import Link from "next/link";
 import { useAuthStore, useProjectStore } from "@/lib/store";
 import {
   Building2, LayoutDashboard, FolderOpen, CalendarDays,
-  GitBranch, Network, ClipboardList, BarChart2,
-  Download, LogOut, ChevronLeft, ChevronRight,
-  Undo2, Redo2, Save, Cpu, User, Bell
+  Network, ClipboardList, BarChart2,
+  Download, LogOut, ChevronLeft, ChevronRight, ChevronDown,
+  Undo2, Redo2, Cpu, User, Bell,
+  Users, HardHat, Pickaxe, Truck, Wrench, ShieldAlert, FileText, Banknote, Calculator, FileCheck, ShoppingCart, Activity
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Executive Dashboard" },
-  { href: "/dashboard/project", icon: FolderOpen, label: "Project Details" },
-  { href: "/dashboard/schedule", icon: CalendarDays, label: "Project Schedule" },
-  { href: "/dashboard/pert", icon: Network, label: "PERT Network" },
-  { href: "/dashboard/boq", icon: ClipboardList, label: "Bill of Quantities" },
-  { href: "/dashboard/analytics", icon: BarChart2, label: "Analytics & AI" },
-  { href: "/dashboard/reports", icon: Download, label: "Export & Reports" },
+type NavItem = { href: string; icon: any; label: string; };
+type NavGroup = { group: string; items: NavItem[]; };
+
+const navGroups: NavGroup[] = [
+  {
+    group: "Overview",
+    items: [
+      { href: "/dashboard", icon: LayoutDashboard, label: "Executive Dashboard" },
+      { href: "/dashboard/project", icon: FolderOpen, label: "Project Details" },
+    ]
+  },
+  {
+    group: "Planning",
+    items: [
+      { href: "/dashboard/schedule", icon: CalendarDays, label: "Project Schedule" },
+      { href: "/dashboard/pert", icon: Network, label: "PERT Network" },
+    ]
+  },
+  {
+    group: "Workforce",
+    items: [
+      { href: "/dashboard/labour", icon: Users, label: "Labour Management" },
+      { href: "/dashboard/attendance", icon: FileCheck, label: "Attendance" },
+      { href: "/dashboard/payroll", icon: Banknote, label: "Payroll" },
+    ]
+  },
+  {
+    group: "Equipment",
+    items: [
+      { href: "/dashboard/equipment", icon: Truck, label: "Equipment Management" },
+      { href: "/dashboard/equipment/utilization", icon: Activity, label: "Utilization" },
+    ]
+  },
+  {
+    group: "Materials",
+    items: [
+      { href: "/dashboard/materials", icon: Pickaxe, label: "Material Management" },
+      { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
+      { href: "/dashboard/purchase-orders", icon: FileText, label: "Purchase Orders" },
+      { href: "/dashboard/suppliers", icon: Building2, label: "Suppliers" },
+    ]
+  },
+  {
+    group: "Subcontractors",
+    items: [
+      { href: "/dashboard/subcontractors", icon: HardHat, label: "Sub Contractors" },
+    ]
+  },
+  {
+    group: "Quality & Safety",
+    items: [
+      { href: "/dashboard/quality", icon: FileCheck, label: "Quality / Inspection" },
+      { href: "/dashboard/safety", icon: ShieldAlert, label: "Safety Management" },
+      { href: "/dashboard/ncr", icon: FileText, label: "NCR" },
+      { href: "/dashboard/daily-progress", icon: Activity, label: "Daily Progress" },
+    ]
+  },
+  {
+    group: "Cost & Billing",
+    items: [
+      { href: "/dashboard/boq", icon: ClipboardList, label: "Bill of Quantities" },
+      { href: "/dashboard/estimation", icon: Calculator, label: "Estimation" },
+      { href: "/dashboard/cost-control", icon: BarChart2, label: "Cost Control" },
+      { href: "/dashboard/billing", icon: Banknote, label: "Billing" },
+      { href: "/dashboard/cashflow", icon: Activity, label: "Cash Flow" },
+      { href: "/dashboard/budget", icon: Banknote, label: "Budget Control" },
+    ]
+  },
+  {
+    group: "Documents",
+    items: [
+      { href: "/dashboard/documents/drawings", icon: FileText, label: "Drawings" },
+      { href: "/dashboard/documents/rfi", icon: FileText, label: "RFI" },
+      { href: "/dashboard/documents/submittals", icon: FileText, label: "Submittals" },
+    ]
+  },
+  {
+    group: "Analytics",
+    items: [
+      { href: "/dashboard/analytics", icon: BarChart2, label: "Analytics & AI" },
+      { href: "/dashboard/ai-assistant", icon: Cpu, label: "AI Assistant" },
+    ]
+  },
+  {
+    group: "Admin",
+    items: [
+      { href: "/dashboard/admin", icon: Wrench, label: "Admin Settings" },
+    ]
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +110,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const defaultExp: Record<string, boolean> = {};
+    navGroups.forEach(g => defaultExp[g.group] = true);
+    return defaultExp;
+  });
 
   useEffect(() => {
     if (!isAuthenticated) router.replace("/login");
@@ -43,7 +130,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!isAuthenticated) return null;
 
-  const sidebarW = collapsed ? 64 : 240;
+  const sidebarW = collapsed ? 64 : 260;
+
+  const toggleGroup = (grp: string) => {
+    setExpandedGroups(prev => ({ ...prev, [grp]: !prev[grp] }));
+  };
+
+  let currentPageLabel = "BuildTrack Pro";
+  navGroups.forEach(g => {
+    g.items.forEach(i => {
+      if (pathname === i.href || (pathname !== "/dashboard" && pathname.startsWith(i.href) && i.href !== "/dashboard")) {
+        currentPageLabel = i.label;
+      }
+    });
+  });
+  if (pathname === "/dashboard") currentPageLabel = "Executive Dashboard";
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:"#0a0e1a" }}>
@@ -91,23 +192,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav items */}
         <nav style={{ flex:1, padding:"12px 8px", display:"flex", flexDirection:"column", gap:2, overflowY:"auto" }}>
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-            return (
-              <Link key={href} href={href} style={{ textDecoration:"none" }}>
-                <div className={`sidebar-nav-item ${active ? "active" : ""}`}
-                  style={{ justifyContent: collapsed ? "center" : "flex-start",
-                    padding: collapsed ? "10px 0" : "10px 14px", margin:"1px 0" }}
-                  title={collapsed ? label : undefined}>
-                  <Icon size={18} style={{ flexShrink:0 }}/>
-                  {!collapsed && <span style={{ whiteSpace:"nowrap", fontSize:13 }}>{label}</span>}
-                  {active && !collapsed && (
-                    <div style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:"#60a5fa" }}/>
-                  )}
+          {navGroups.map(grp => (
+            <div key={grp.group} style={{ marginBottom: collapsed ? 4 : 8 }}>
+              {!collapsed && (
+                <div onClick={() => toggleGroup(grp.group)} style={{
+                  padding: "6px 12px", fontSize: 10, fontWeight: 700, color: "#64748b",
+                  textTransform: "uppercase", letterSpacing: "0.08em", display: "flex",
+                  justifyContent: "space-between", alignItems: "center", cursor: "pointer"
+                }}>
+                  {grp.group}
+                  {expandedGroups[grp.group] ? <ChevronDown size={12}/> : <ChevronRight size={12}/>}
                 </div>
-              </Link>
-            );
-          })}
+              )}
+              {(!collapsed ? expandedGroups[grp.group] : true) && grp.items.map(({ href, icon: Icon, label }) => {
+                const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+                return (
+                  <Link key={href} href={href} style={{ textDecoration:"none" }}>
+                    <div className={`sidebar-nav-item ${active ? "active" : ""}`}
+                      style={{ justifyContent: collapsed ? "center" : "flex-start",
+                        padding: collapsed ? "10px 0" : "8px 12px", margin:"1px 0" }}
+                      title={collapsed ? label : undefined}>
+                      <Icon size={16} style={{ flexShrink:0 }}/>
+                      {!collapsed && <span style={{ whiteSpace:"nowrap", fontSize:12.5 }}>{label}</span>}
+                      {active && !collapsed && (
+                        <div style={{ marginLeft:"auto", width:6, height:6, borderRadius:"50%", background:"#60a5fa" }}/>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Active Project Info */}
@@ -143,8 +258,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               BUILDTRACK PRO
             </div>
             <div style={{ fontSize:16, fontWeight:700, color:"#f1f5f9", lineHeight:1.2 }}>
-              {navItems.find(n => n.href === pathname || (pathname !== "/dashboard" && pathname.startsWith(n.href) && n.href !== "/dashboard"))?.label
-                ?? (pathname === "/dashboard" ? "Executive Dashboard" : "BuildTrack Pro")}
+              {currentPageLabel}
             </div>
           </div>
 

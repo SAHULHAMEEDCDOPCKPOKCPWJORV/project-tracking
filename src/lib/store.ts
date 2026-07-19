@@ -65,14 +65,27 @@ export interface WBSNode {
 
 export interface BOQItem {
   id: string;
+  itemNo: string;
   floor: string;
   category: string;
-  item: string;
+  description: string;
+  specification: string;
+  activity: string;
   unit: string;
   quantity: number;
   wastage: number;
   rate: number;
+  amount: number;
+  contractor: string;
+  vendor: string;
+  material: number;
+  labour: number;
+  equipment: number;
+  overhead: number;
+  profit: number;
   gst: number;
+  totalCost: number;
+  remarks: string;
 }
 
 interface AuthState {
@@ -234,3 +247,97 @@ export const useBOQStore = create<BOQState>()(
     { name: "buildtrack-boq" }
   )
 );
+
+// --- New ERP Stores ---
+
+export interface Worker {
+  id: string;
+  name: string;
+  trade: string;
+  dailyWage: number;
+  contractor: string;
+}
+interface LabourState {
+  workers: Worker[];
+  setWorkers: (workers: Worker[]) => void;
+  updateWorker: (id: string, changes: Partial<Worker>) => void;
+}
+export const useLabourStore = create<LabourState>()(persist((set) => ({
+  workers: [],
+  setWorkers: (workers) => set({ workers }),
+  updateWorker: (id, changes) => set(s => ({ workers: s.workers.map(w => w.id === id ? { ...w, ...changes } : w) }))
+}), { name: "buildtrack-labour" }));
+
+export interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  hourlyRate: number;
+  status: "Active" | "Maintenance" | "Idle";
+}
+interface EquipmentState {
+  equipmentList: Equipment[];
+  setEquipment: (eq: Equipment[]) => void;
+  updateEquipment: (id: string, changes: Partial<Equipment>) => void;
+}
+export const useEquipmentStore = create<EquipmentState>()(persist((set) => ({
+  equipmentList: [],
+  setEquipment: (eq) => set({ equipmentList: eq }),
+  updateEquipment: (id, changes) => set(s => ({ equipmentList: s.equipmentList.map(e => e.id === id ? { ...e, ...changes } : e) }))
+}), { name: "buildtrack-equipment" }));
+
+export interface MaterialItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  unitPrice: number;
+  stock: number;
+}
+interface MaterialState {
+  materials: MaterialItem[];
+  setMaterials: (mats: MaterialItem[]) => void;
+  updateMaterial: (id: string, changes: Partial<MaterialItem>) => void;
+}
+export const useMaterialStore = create<MaterialState>()(persist((set) => ({
+  materials: [],
+  setMaterials: (mats) => set({ materials: mats }),
+  updateMaterial: (id, changes) => set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, ...changes } : m) }))
+}), { name: "buildtrack-material" }));
+
+export interface QualityIssue {
+  id: string;
+  title: string;
+  description: string;
+  status: "Open" | "Resolved";
+  date: string;
+}
+interface QualityState {
+  issues: QualityIssue[];
+  setIssues: (issues: QualityIssue[]) => void;
+  updateIssue: (id: string, changes: Partial<QualityIssue>) => void;
+}
+export const useQualityStore = create<QualityState>()(persist((set) => ({
+  issues: [],
+  setIssues: (issues) => set({ issues }),
+  updateIssue: (id, changes) => set(s => ({ issues: s.issues.map(i => i.id === id ? { ...i, ...changes } : i) }))
+}), { name: "buildtrack-quality" }));
+
+export interface BillingRecord {
+  id: string;
+  title: string;
+  amount: number;
+  type: "RA Bill" | "Vendor Bill" | "Client Invoice";
+  status: "Draft" | "Submitted" | "Approved" | "Paid";
+  date: string;
+}
+interface BillingState {
+  records: BillingRecord[];
+  setRecords: (records: BillingRecord[]) => void;
+  updateRecord: (id: string, changes: Partial<BillingRecord>) => void;
+}
+export const useBillingStore = create<BillingState>()(persist((set) => ({
+  records: [],
+  setRecords: (records) => set({ records }),
+  updateRecord: (id, changes) => set(s => ({ records: s.records.map(r => r.id === id ? { ...r, ...changes } : r) }))
+}), { name: "buildtrack-billing" }));

@@ -93,9 +93,19 @@ export default function ProjectPage() {
                 <input className="input-field" value={project.clientName}
                   onChange={e => setProject({ clientName: e.target.value })}/>
               </Field>
-              <Field label="Contractor Name" span={2}>
+              <Field label="Consultant Name">
+                <input className="input-field" value={project.consultantName}
+                  onChange={e => setProject({ consultantName: e.target.value })}/>
+              </Field>
+              <Field label="Contractor Name">
                 <input className="input-field" value={project.contractorName}
                   onChange={e => setProject({ contractorName: e.target.value })}/>
+              </Field>
+              <Field label="Status">
+                <select className="input-field" value={project.status}
+                  onChange={e => setProject({ status: e.target.value as any })}>
+                  {["Planning","In Progress","On Hold","Completed"].map(s => <option key={s}>{s}</option>)}
+                </select>
               </Field>
               <Field label="City">
                 <input className="input-field" list="cities" value={project.city}

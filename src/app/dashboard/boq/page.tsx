@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useBOQStore, useProjectStore, BOQItem } from "@/lib/store";
+import { useBOQStore, useProjectStore, BOQItem, useMaterialStore, useLabourStore } from "@/lib/store";
 import { generateBOQ } from "@/lib/gantt-engine";
 import { formatCurrency } from "@/lib/utils";
 import { RefreshCw, Download, ChevronDown, ChevronRight, Edit3, Save } from "lucide-react";
 
 export default function BOQPage() {
   const { project } = useProjectStore();
+  const { materials } = useMaterialStore();
+  const { rates } = useLabourStore();
   const { items, setItems, updateItem } = useBOQStore();
   const [groupBy, setGroupBy] = useState<"floor" | "category">("floor");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -14,8 +16,12 @@ export default function BOQPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (items.length === 0) setItems(generateBOQ(project));
+    if (items.length === 0) setItems(generateBOQ(project, materials, rates));
   }, []);
+
+  const handleRegenerate = () => {
+    setItems(generateBOQ(project, materials, rates));
+  };
 
   const filtered = items.filter(i =>
     !search || i.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,7 +87,7 @@ export default function BOQPage() {
         </div>
 
         <div style={{ marginLeft:"auto", display:"flex", gap:10 }}>
-          <button onClick={() => setItems(generateBOQ(project))} className="btn-secondary" style={{ height:36, padding:"0 16px" }}>
+          <button onClick={handleRegenerate} className="btn-secondary" style={{ height:36, padding:"0 16px" }}>
             <RefreshCw size={14}/> Regenerate
           </button>
           <button className="btn-primary" style={{ height:36, padding:"0 16px", background:"linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>

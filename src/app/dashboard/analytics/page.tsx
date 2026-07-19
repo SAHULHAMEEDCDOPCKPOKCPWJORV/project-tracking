@@ -1,6 +1,6 @@
 "use client";
-import { useEffect } from "react";
-import { useProjectStore, useGanttStore, useBOQStore } from "@/lib/store";
+import React, { useEffect } from "react";
+import { useProjectStore, useGanttStore, useBOQStore, useMaterialStore, useLabourStore } from "@/lib/store";
 import { generateGanttTasks, generateBOQ } from "@/lib/gantt-engine";
 import { formatCurrency, parseDate, daysBetween } from "@/lib/utils";
 import { Zap, TrendingUp, TrendingDown, AlertTriangle, Clock } from "lucide-react";
@@ -15,10 +15,12 @@ export default function AnalyticsPage() {
   const { project } = useProjectStore();
   const { tasks, setTasks } = useGanttStore();
   const { items, setItems } = useBOQStore();
+  const { materials } = useMaterialStore();
+  const { rates } = useLabourStore();
 
   useEffect(() => {
     if (tasks.length === 0) setTasks(generateGanttTasks(project));
-    if (items.length === 0) setItems(generateBOQ(project));
+    if (items.length === 0) setItems(generateBOQ(project, materials, rates));
   }, []);
 
   const totalCost = project.totalBuiltUpArea * project.costPerSqft;

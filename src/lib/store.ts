@@ -4,7 +4,9 @@ import { persist } from "zustand/middleware";
 export interface ProjectDetails {
   projectName: string;
   clientName: string;
+  consultantName: string;
   contractorName: string;
+  status: "Planning" | "In Progress" | "On Hold" | "Completed";
   city: string;
   state: string;
   pincode: string;
@@ -30,6 +32,7 @@ export interface ProjectDetails {
   securityDeposit: number;
   labourCess: number;
   pvc: number;
+  estimatedCost?: number;
 }
 
 export interface GanttTask {
@@ -124,7 +127,9 @@ interface BOQState {
 const defaultProject: ProjectDetails = {
   projectName: "",
   clientName: "",
+  consultantName: "",
   contractorName: "",
+  status: "Planning",
   city: "Chennai",
   state: "Tamil Nadu",
   pincode: "600001",
@@ -250,23 +255,29 @@ export const useBOQStore = create<BOQState>()(
 
 // --- New ERP Stores ---
 
-export interface Worker {
+export interface LabourRate {
   id: string;
-  name: string;
   trade: string;
-  dailyWage: number;
-  contractor: string;
+  dailyRate: number;
+  monthlyRate: number;
+  overtimeRate: number;
+  availability: number;
+  required: number;
 }
 interface LabourState {
-  workers: Worker[];
-  setWorkers: (workers: Worker[]) => void;
-  updateWorker: (id: string, changes: Partial<Worker>) => void;
+  rates: LabourRate[];
+  setRates: (rates: LabourRate[]) => void;
+  updateRate: (id: string, changes: Partial<LabourRate>) => void;
+  addRate: (rate: LabourRate) => void;
+  deleteRate: (id: string) => void;
 }
 export const useLabourStore = create<LabourState>()(persist((set) => ({
-  workers: [],
-  setWorkers: (workers) => set({ workers }),
-  updateWorker: (id, changes) => set(s => ({ workers: s.workers.map(w => w.id === id ? { ...w, ...changes } : w) }))
-}), { name: "buildtrack-labour" }));
+  rates: [],
+  setRates: (rates) => set({ rates }),
+  updateRate: (id, changes) => set(s => ({ rates: s.rates.map(r => r.id === id ? { ...r, ...changes } : r) })),
+  addRate: (rate) => set(s => ({ rates: [...s.rates, rate] })),
+  deleteRate: (id) => set(s => ({ rates: s.rates.filter(r => r.id !== id) }))
+}), { name: "buildtrack-labour-rates" }));
 
 export interface Equipment {
   id: string;
@@ -290,19 +301,29 @@ export interface MaterialItem {
   id: string;
   name: string;
   category: string;
+  brand: string;
+  specification: string;
   unit: string;
-  unitPrice: number;
+  todayPrice: number;
+  yesterdayPrice: number;
+  requiredQuantity: number;
   stock: number;
+  supplier: string;
+  lastUpdated: string;
 }
 interface MaterialState {
   materials: MaterialItem[];
   setMaterials: (mats: MaterialItem[]) => void;
   updateMaterial: (id: string, changes: Partial<MaterialItem>) => void;
+  addMaterial: (mat: MaterialItem) => void;
+  deleteMaterial: (id: string) => void;
 }
 export const useMaterialStore = create<MaterialState>()(persist((set) => ({
   materials: [],
   setMaterials: (mats) => set({ materials: mats }),
-  updateMaterial: (id, changes) => set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, ...changes } : m) }))
+  updateMaterial: (id, changes) => set(s => ({ materials: s.materials.map(m => m.id === id ? { ...m, ...changes } : m) })),
+  addMaterial: (mat) => set(s => ({ materials: [...s.materials, mat] })),
+  deleteMaterial: (id) => set(s => ({ materials: s.materials.filter(m => m.id !== id) }))
 }), { name: "buildtrack-material" }));
 
 export interface QualityIssue {

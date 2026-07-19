@@ -18,86 +18,36 @@ const navGroups: NavGroup[] = [
   {
     group: "Overview",
     items: [
-      { href: "/dashboard", icon: LayoutDashboard, label: "Executive Dashboard" },
+      { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/dashboard/project", icon: FolderOpen, label: "Project Details" },
     ]
   },
   {
     group: "Planning",
     items: [
-      { href: "/dashboard/schedule", icon: CalendarDays, label: "Project Schedule" },
+      { href: "/dashboard/schedule", icon: CalendarDays, label: "Planning Schedule" },
       { href: "/dashboard/pert", icon: Network, label: "PERT Network" },
     ]
   },
   {
-    group: "Workforce",
+    group: "Resources",
     items: [
-      { href: "/dashboard/labour", icon: Users, label: "Labour Management" },
-      { href: "/dashboard/attendance", icon: FileCheck, label: "Attendance" },
-      { href: "/dashboard/payroll", icon: Banknote, label: "Payroll" },
+      { href: "/dashboard/materials", icon: Pickaxe, label: "Material Price Management" },
+      { href: "/dashboard/labour", icon: Users, label: "Labour Rate Board" },
     ]
   },
   {
-    group: "Equipment",
+    group: "Cost & Estimation",
     items: [
-      { href: "/dashboard/equipment", icon: Truck, label: "Equipment Management" },
-      { href: "/dashboard/equipment/utilization", icon: Activity, label: "Utilization" },
-    ]
-  },
-  {
-    group: "Materials",
-    items: [
-      { href: "/dashboard/materials", icon: Pickaxe, label: "Material Management" },
-      { href: "/dashboard/inventory", icon: ShoppingCart, label: "Inventory" },
-      { href: "/dashboard/purchase-orders", icon: FileText, label: "Purchase Orders" },
-      { href: "/dashboard/suppliers", icon: Building2, label: "Suppliers" },
-    ]
-  },
-  {
-    group: "Subcontractors",
-    items: [
-      { href: "/dashboard/subcontractors", icon: HardHat, label: "Sub Contractors" },
-    ]
-  },
-  {
-    group: "Quality & Safety",
-    items: [
-      { href: "/dashboard/quality", icon: FileCheck, label: "Quality / Inspection" },
-      { href: "/dashboard/safety", icon: ShieldAlert, label: "Safety Management" },
-      { href: "/dashboard/ncr", icon: FileText, label: "NCR" },
-      { href: "/dashboard/daily-progress", icon: Activity, label: "Daily Progress" },
-    ]
-  },
-  {
-    group: "Cost & Billing",
-    items: [
-      { href: "/dashboard/boq", icon: ClipboardList, label: "Bill of Quantities" },
+      { href: "/dashboard/boq", icon: ClipboardList, label: "Bill of Quantities (BOQ)" },
       { href: "/dashboard/estimation", icon: Calculator, label: "Estimation" },
-      { href: "/dashboard/cost-control", icon: BarChart2, label: "Cost Control" },
-      { href: "/dashboard/billing", icon: Banknote, label: "Billing" },
-      { href: "/dashboard/cashflow", icon: Activity, label: "Cash Flow" },
-      { href: "/dashboard/budget", icon: Banknote, label: "Budget Control" },
     ]
   },
   {
-    group: "Documents",
+    group: "Reporting",
     items: [
-      { href: "/dashboard/documents/drawings", icon: FileText, label: "Drawings" },
-      { href: "/dashboard/documents/rfi", icon: FileText, label: "RFI" },
-      { href: "/dashboard/documents/submittals", icon: FileText, label: "Submittals" },
-    ]
-  },
-  {
-    group: "Analytics",
-    items: [
-      { href: "/dashboard/analytics", icon: BarChart2, label: "Analytics & AI" },
-      { href: "/dashboard/ai-assistant", icon: Cpu, label: "AI Assistant" },
-    ]
-  },
-  {
-    group: "Admin",
-    items: [
-      { href: "/dashboard/admin", icon: Wrench, label: "Admin Settings" },
+      { href: "/dashboard/analytics", icon: BarChart2, label: "Analytics" },
+      { href: "/dashboard/reports", icon: FileText, label: "Project Report" },
     ]
   },
 ];

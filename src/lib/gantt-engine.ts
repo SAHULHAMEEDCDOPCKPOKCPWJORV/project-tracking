@@ -183,14 +183,36 @@ export function buildWBSNodes(tasks: GanttTask[]): WBSNode[] {
   }));
 }
 
-export function generateBOQ(project: ProjectDetails): BOQItem[] {
+export function generateBOQ(project: ProjectDetails, materials: any[] = [], labourRates: any[] = []): BOQItem[] {
   const { totalBuiltUpArea, numFloors, costPerSqft, gstPercentage } = project;
   const floorArea = totalBuiltUpArea / (numFloors + 1);
   const items: BOQItem[] = [];
   let counter = 1;
 
-  const add = (floor: string, category: string, description: string, unit: string, qty: number, rate: number, wastage = 5) => {
-    const amount = qty * rate;
+  const getMatPrice = (query: string, defaultPrice: number) => {
+    const mat = materials.find(m => m.name.toLowerCase().includes(query.toLowerCase()) || m.category.toLowerCase().includes(query.toLowerCase()));
+    return mat ? mat.todayPrice : defaultPrice;
+  };
+  
+  const getLabPrice = (query: string, defaultPrice: number) => {
+    const lab = labourRates.find(l => l.trade.toLowerCase().includes(query.toLowerCase()));
+    return lab ? lab.dailyRate : defaultPrice;
+  };
+
+  const add = (floor: string, category: string, description: string, unit: string, qty: number, rate: number, wastage = 5, matQuery = "", labQuery = "") => {
+    
+    // dynamically adjust rate based on materials & labour if provided
+    let finalRate = rate;
+    if (matQuery || labQuery) {
+      let mCost = matQuery ? getMatPrice(matQuery, rate * 0.6) : rate * 0.6;
+      let lCost = labQuery ? getLabPrice(labQuery, rate * 0.3) : rate * 0.3;
+      // Some simple heuristic to fit into a per-unit rate
+      if (unit === "Cum" || unit === "Sqm" || unit === "MT") {
+        finalRate = mCost + (lCost / 8); // simplified
+      }
+    }
+
+    const amount = qty * finalRate;
     const material = amount * 0.6;
     const labour = amount * 0.3;
     const equipment = amount * 0.1;
@@ -210,7 +232,7 @@ export function generateBOQ(project: ProjectDetails): BOQItem[] {
       unit, 
       quantity: qty, 
       wastage, 
-      rate,
+      rate: finalRate,
       amount,
       contractor: "Main Contractor",
       vendor: "Local Vendor",
@@ -226,66 +248,50 @@ export function generateBOQ(project: ProjectDetails): BOQItem[] {
     counter++;
   };
 
-  // Foundation items (independent of floors)
-  add("Foundation","Earthwork","Excavation for Footing","Cum", floorArea * 0.3, 250, 0);
-  add("Foundation","PCC","PCC M10 (1:3:6)","Cum", floorArea * 0.05, 5500, 3);
-  add("Foundation","RCC","RCC M25 – Footings","Cum", floorArea * 0.12, 7200, 5);
-  add("Foundation","Steel","TMT Steel Fe500 – Footings","MT", floorArea * 0.012, 70000, 5);
-  add("Foundation","Formwork","Shuttering for Footings","Sqm", floorArea * 0.8, 450, 5);
-  add("Foundation","Masonry","Plinth Beam","Cum", floorArea * 0.04, 7500, 5);
-  add("Foundation","Backfill","Backfilling & Compaction","Cum", floorArea * 0.2, 200, 0);
+  // Foundation items
+  add("Foundation","Earthwork","Excavation for Footing","Cum", floorArea * 0.3, 250, 0, "", "Helper");
+  add("Foundation","PCC","PCC M10 (1:3:6)","Cum", floorArea * 0.05, 5500, 3, "Cement", "Mason");
+  add("Foundation","RCC","RCC M25 – Footings","Cum", floorArea * 0.12, 7200, 5, "Cement", "Mason");
+  add("Foundation","Steel","TMT Steel Fe500 – Footings","MT", floorArea * 0.012, 72000, 5, "Steel", "Steel Fixer");
+  add("Foundation","Formwork","Shuttering for Footings","Sqm", floorArea * 0.8, 450, 5, "Wood", "Carpenter");
+  add("Foundation","Masonry","Plinth Beam","Cum", floorArea * 0.04, 7500, 5, "Cement", "Mason");
+  add("Foundation","Backfill","Backfilling & Compaction","Cum", floorArea * 0.2, 200, 0, "", "Helper");
 
   for (let f = 0; f <= numFloors; f++) {
     const floorLabel = f === 0 ? "Ground Floor" : `Floor ${f}`;
-
-    // Structural
-    add(floorLabel,"RCC","RCC M25 – Columns","Cum", floorArea * 0.04, 8000, 5);
-    add(floorLabel,"RCC","RCC M25 – Beams","Cum", floorArea * 0.06, 8000, 5);
-    add(floorLabel,"RCC","RCC M25 – Slab","Cum", floorArea * 0.12, 7500, 5);
-    add(floorLabel,"Steel","TMT Steel Fe500 – Columns","MT", floorArea * 0.005, 70000, 5);
-    add(floorLabel,"Steel","TMT Steel Fe500 – Beams","MT", floorArea * 0.007, 70000, 5);
-    add(floorLabel,"Steel","TMT Steel Fe500 – Slab","MT", floorArea * 0.009, 70000, 5);
-    add(floorLabel,"Formwork","Shuttering – Columns","Sqm", floorArea * 0.5, 450, 5);
-    add(floorLabel,"Formwork","Shuttering – Beams & Slab","Sqm", floorArea * 1.2, 420, 5);
-
-    // Masonry
-    add(floorLabel,"Masonry","Brickwork 230mm (Ext)","Sqm", floorArea * 0.35, 320, 10);
-    add(floorLabel,"Masonry","Brickwork 115mm (Int)","Sqm", floorArea * 0.5, 280, 10);
-
-    // Plastering
-    add(floorLabel,"Plaster","Cement Plaster 12mm (Ext)","Sqm", floorArea * 0.9, 85, 10);
-    add(floorLabel,"Plaster","Cement Plaster 12mm (Int)","Sqm", floorArea * 1.8, 75, 10);
-
-    // Flooring
-    add(floorLabel,"Flooring","Vitrified Tile 600×600","Sqm", floorArea * 0.95, 750, 5);
-    add(floorLabel,"Flooring","Skirting Tile","Rmt", floorArea * 0.3, 120, 5);
-
-    // Doors & Windows
-    add(floorLabel,"Doors","Teak Wood Door Frame + Shutter","No", Math.max(1, Math.round(floorArea / 200)), 18000, 3);
-    add(floorLabel,"Windows","UPVC Sliding Window","No", Math.max(2, Math.round(floorArea / 150)), 8500, 3);
-
-    // Painting
-    add(floorLabel,"Painting","Interior Emulsion Paint","Sqm", floorArea * 1.8, 55, 5);
-    add(floorLabel,"Painting","Exterior Texture Paint","Sqm", floorArea * 0.5, 120, 5);
-
-    // Electrical
-    add(floorLabel,"Electrical","Electrical Wiring (Full)","Point", Math.round(floorArea / 15), 650, 5);
-    add(floorLabel,"Electrical","MCB Distribution Board","No", 1, 4500, 2);
-    add(floorLabel,"Electrical","Light Fixtures","No", Math.round(floorArea / 20), 850, 5);
-    add(floorLabel,"Electrical","Power Sockets","No", Math.round(floorArea / 25), 350, 5);
-
-    // Plumbing
-    add(floorLabel,"Plumbing","CPVC Pipe 25mm","Rmt", floorArea * 0.4, 180, 10);
-    add(floorLabel,"Plumbing","PVC Drain 110mm","Rmt", floorArea * 0.3, 220, 10);
-    add(floorLabel,"Plumbing","Sanitary Ware Set","No", Math.max(1, Math.round(floorArea / 300)), 22000, 3);
+    add(floorLabel,"RCC","RCC M25 – Columns","Cum", floorArea * 0.04, 8000, 5, "Cement", "Mason");
+    add(floorLabel,"RCC","RCC M25 – Beams","Cum", floorArea * 0.06, 8000, 5, "Cement", "Mason");
+    add(floorLabel,"RCC","RCC M25 – Slab","Cum", floorArea * 0.12, 7500, 5, "Cement", "Mason");
+    add(floorLabel,"Steel","TMT Steel Fe500 – Columns","MT", floorArea * 0.005, 72000, 5, "Steel", "Steel Fixer");
+    add(floorLabel,"Steel","TMT Steel Fe500 – Beams","MT", floorArea * 0.007, 72000, 5, "Steel", "Steel Fixer");
+    add(floorLabel,"Steel","TMT Steel Fe500 – Slab","MT", floorArea * 0.009, 72000, 5, "Steel", "Steel Fixer");
+    add(floorLabel,"Formwork","Shuttering – Columns","Sqm", floorArea * 0.5, 450, 5, "Wood", "Carpenter");
+    add(floorLabel,"Formwork","Shuttering – Beams & Slab","Sqm", floorArea * 1.2, 420, 5, "Wood", "Carpenter");
+    add(floorLabel,"Masonry","Brickwork 230mm (Ext)","Sqm", floorArea * 0.35, 320, 10, "Bricks", "Mason");
+    add(floorLabel,"Masonry","Brickwork 115mm (Int)","Sqm", floorArea * 0.5, 280, 10, "Bricks", "Mason");
+    add(floorLabel,"Plaster","Cement Plaster 12mm (Ext)","Sqm", floorArea * 0.9, 85, 10, "Cement", "Mason");
+    add(floorLabel,"Plaster","Cement Plaster 12mm (Int)","Sqm", floorArea * 1.8, 75, 10, "Cement", "Mason");
+    add(floorLabel,"Flooring","Vitrified Tile 600×600","Sqm", floorArea * 0.95, 750, 5, "Tiles", "Mason");
+    add(floorLabel,"Flooring","Skirting Tile","Rmt", floorArea * 0.3, 120, 5, "Tiles", "Mason");
+    add(floorLabel,"Doors","Teak Wood Door Frame + Shutter","No", Math.max(1, Math.round(floorArea / 200)), 18000, 3, "Wood", "Carpenter");
+    add(floorLabel,"Windows","UPVC Sliding Window","No", Math.max(2, Math.round(floorArea / 150)), 8500, 3, "Glass", "Carpenter");
+    add(floorLabel,"Painting","Interior Emulsion Paint","Sqm", floorArea * 1.8, 55, 5, "Paint", "Painter");
+    add(floorLabel,"Painting","Exterior Texture Paint","Sqm", floorArea * 0.5, 120, 5, "Paint", "Painter");
+    add(floorLabel,"Electrical","Electrical Wiring (Full)","Point", Math.round(floorArea / 15), 650, 5, "Electrical", "Electrician");
+    add(floorLabel,"Electrical","MCB Distribution Board","No", 1, 4500, 2, "Electrical", "Electrician");
+    add(floorLabel,"Electrical","Light Fixtures","No", Math.round(floorArea / 20), 850, 5, "Electrical", "Electrician");
+    add(floorLabel,"Electrical","Power Sockets","No", Math.round(floorArea / 25), 350, 5, "Electrical", "Electrician");
+    add(floorLabel,"Plumbing","CPVC Pipe 25mm","Rmt", floorArea * 0.4, 180, 10, "Plumbing", "Plumber");
+    add(floorLabel,"Plumbing","PVC Drain 110mm","Rmt", floorArea * 0.3, 220, 10, "Plumbing", "Plumber");
+    add(floorLabel,"Plumbing","Sanitary Ware Set","No", Math.max(1, Math.round(floorArea / 300)), 22000, 3, "Plumbing", "Plumber");
   }
 
   // Site Works
-  add("Site Works","Water Tank","Overhead Water Tank 1000L","No", 1, 15000, 2);
-  add("Site Works","Septic","Septic Tank (Brick)","No", 1, 45000, 3);
-  add("Site Works","Compound","Compound Wall (1.8m)","Rmt", Math.sqrt(totalBuiltUpArea) * 4, 1200, 5);
-  add("Site Works","Compound","Main Gate (MS)","No", 1, 35000, 3);
-  add("Site Works","Landscape","External Paving","Sqm", totalBuiltUpArea * 0.3, 280, 5);
+  add("Site Works","Water Tank","Overhead Water Tank 1000L","No", 1, 15000, 2, "Tank", "Plumber");
+  add("Site Works","Septic","Septic Tank (Brick)","No", 1, 45000, 3, "Bricks", "Mason");
+  add("Site Works","Compound","Compound Wall (1.8m)","Rmt", Math.sqrt(totalBuiltUpArea) * 4, 1200, 5, "Bricks", "Mason");
+  add("Site Works","Compound","Main Gate (MS)","No", 1, 35000, 3, "Steel", "Welder");
+  add("Site Works","Landscape","External Paving","Sqm", totalBuiltUpArea * 0.3, 280, 5, "Tiles", "Mason");
 
   return items;
 }

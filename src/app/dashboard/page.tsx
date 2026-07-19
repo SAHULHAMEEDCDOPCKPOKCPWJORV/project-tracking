@@ -69,13 +69,23 @@ export default function ExecutiveDashboard() {
       trendUp: true, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)"
     },
     {
+      label: "SPI", value: "1.02",
+      sub: "Schedule Perf.", icon: Activity, color: "#10b981", trend: "Ahead",
+      trendUp: true, bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)"
+    },
+    {
+      label: "CPI", value: "0.98",
+      sub: "Cost Perf.", icon: Activity, color: "#f59e0b", trend: "Over",
+      trendUp: false, bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.25)"
+    },
+    {
       label: "Critical Tasks", value: criticalTasks.toString(),
       sub: "On Critical Path", icon: AlertTriangle, color: "#ef4444", trend: "Watch",
       trendUp: false, bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.25)"
     },
     {
       label: "Active Workers", value: project.defaultWorkers.toString(),
-      sub: "Default Workers", icon: Users, color: "#8b5cf6", trend: "Deployed",
+      sub: "Labour Count", icon: Users, color: "#8b5cf6", trend: "Deployed",
       trendUp: true, bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.25)"
     },
   ];
@@ -118,7 +128,7 @@ export default function ExecutiveDashboard() {
     <div style={{ padding:24, display:"flex", flexDirection:"column", gap:20 }}>
 
       {/* ── KPI Cards ─────────────────────────────────── */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14 }}>
         {kpis.map((k) => (
           <div key={k.label} className="kpi-card" style={{
             background: k.bg, borderColor: k.border,

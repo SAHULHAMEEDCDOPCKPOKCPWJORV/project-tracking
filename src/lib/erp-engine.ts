@@ -1,7 +1,7 @@
-import { BOQItem, GanttTask, Worker, Equipment, MaterialItem, BillingRecord } from "./store";
+import { BOQItem, GanttTask, LabourRate, Equipment, MaterialItem, BillingRecord } from "./store";
 
-export function computeLabourCost(workers: Worker[], hoursWorked: number): number {
-  return workers.reduce((sum, w) => sum + ((w.dailyWage / 8) * hoursWorked), 0);
+export function computeLabourCost(rates: LabourRate[], hoursWorked: number): number {
+  return rates.reduce((sum, r) => sum + ((r.dailyRate / 8) * hoursWorked * r.required), 0);
 }
 
 export function computeEquipmentCost(equipment: Equipment[], hoursUsed: number): number {
@@ -11,7 +11,7 @@ export function computeEquipmentCost(equipment: Equipment[], hoursUsed: number):
 export function computeMaterialCost(materials: MaterialItem[], quantitiesUsed: Record<string, number>): number {
   return materials.reduce((sum, m) => {
     const used = quantitiesUsed[m.id] || 0;
-    return sum + (used * m.unitPrice);
+    return sum + (used * m.todayPrice);
   }, 0);
 }
 

@@ -49,16 +49,16 @@ export default function LabourPage() {
     (!search || r.trade.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalDailyCost = filtered.reduce((s, r) => s + r.dailyRate * r.required, 0);
-  const totalMonthlyCost = filtered.reduce((s, r) => s + r.monthlyRate * r.required, 0);
-  const totalLabour = filtered.reduce((s, r) => s + r.required, 0);
-  const availableLabour = filtered.reduce((s, r) => s + r.availability, 0);
+  const totalDailyCost = filtered.reduce((s, r) => s + (r.dailyRate || 0) * (r.required || 0), 0);
+  const totalMonthlyCost = filtered.reduce((s, r) => s + (r.monthlyRate || 0) * (r.required || 0), 0);
+  const totalLabour = filtered.reduce((s, r) => s + (r.required || 0), 0);
+  const availableLabour = filtered.reduce((s, r) => s + (r.availability || 0), 0);
 
   const chartData = filtered.slice(0, 10).map(r => ({
     name: r.trade,
-    required: r.required,
-    available: r.availability,
-    cost: r.dailyRate * r.required
+    required: r.required || 0,
+    available: r.availability || 0,
+    cost: (r.dailyRate || 0) * (r.required || 0)
   }));
 
   return (
@@ -152,9 +152,9 @@ export default function LabourPage() {
           </thead>
           <tbody>
             {filtered.map(r => {
-              const dailyCost = r.dailyRate * r.required;
-              const monthlyCost = r.monthlyRate * r.required;
-              const status = r.availability >= r.required ? "Sufficient" : "Shortage";
+              const dailyCost = (r.dailyRate || 0) * (r.required || 0);
+              const monthlyCost = (r.monthlyRate || 0) * (r.required || 0);
+              const status = (r.availability || 0) >= (r.required || 0) ? "Sufficient" : "Shortage";
               const statusColor = status === "Sufficient" ? "#10b981" : "#ef4444";
               
               return (

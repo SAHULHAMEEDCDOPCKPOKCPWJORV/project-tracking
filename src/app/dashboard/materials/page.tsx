@@ -41,7 +41,7 @@ export default function MaterialsPage() {
     (!search || m.name.toLowerCase().includes(search.toLowerCase()) || m.brand.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalMaterialCost = filtered.reduce((s, m) => s + m.todayPrice * m.requiredQuantity, 0);
+  const totalMaterialCost = filtered.reduce((s, m) => s + (m.todayPrice || 0) * (m.requiredQuantity || 0), 0);
 
   return (
     <div style={{ padding:20, display:"flex", flexDirection:"column", gap:20 }}>
@@ -111,17 +111,17 @@ export default function MaterialsPage() {
           </thead>
           <tbody>
             {filtered.map(m => {
-              const diff = m.todayPrice - m.yesterdayPrice;
-              const diffPercent = (diff / m.yesterdayPrice) * 100;
-              const totalCost = m.todayPrice * m.requiredQuantity;
+              const diff = (m.todayPrice || 0) - (m.yesterdayPrice || 0);
+              const diffPercent = (m.yesterdayPrice || 0) === 0 ? 0 : (diff / m.yesterdayPrice) * 100;
+              const totalCost = (m.todayPrice || 0) * (m.requiredQuantity || 0);
               return (
                 <tr key={m.id} style={{ height:50 }}>
                   <td style={{ fontWeight:700, color:"#f1f5f9" }}>{m.name}</td>
                   <td style={{ color:"#94a3b8" }}>{m.brand}</td>
                   <td style={{ fontSize:11, color:"#64748b" }}>{m.specification}</td>
                   <td style={{ color:"#94a3b8" }}>{m.unit}</td>
-                  <td style={{ fontWeight:800, color:"#e2e8f0" }}>₹{m.todayPrice.toLocaleString("en-IN")}</td>
-                  <td style={{ color:"#64748b" }}>₹{m.yesterdayPrice.toLocaleString("en-IN")}</td>
+                  <td style={{ fontWeight:800, color:"#e2e8f0" }}>₹{(m.todayPrice || 0).toLocaleString("en-IN")}</td>
+                  <td style={{ color:"#64748b" }}>₹{(m.yesterdayPrice || 0).toLocaleString("en-IN")}</td>
                   <td>
                     {diff === 0 ? (
                       <span style={{ color:"#64748b", fontSize:12, fontWeight:700 }}>-</span>

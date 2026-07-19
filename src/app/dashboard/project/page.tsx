@@ -40,6 +40,7 @@ export default function ProjectPage() {
   const { setTasks } = useGanttStore();
   const { setItems } = useBOQStore();
   const [saved, setSaved] = useState(false);
+  const [regen, setRegen] = useState(false);
 
   const totalCost = project.totalBuiltUpArea * project.costPerSqft;
   const advance = totalCost * project.advancePercentage / 100;
@@ -60,14 +61,16 @@ export default function ProjectPage() {
     const tasks = generateGanttTasks(project);
     setTasks(tasks);
     setItems(generateBOQ(project));
+    setRegen(true);
+    setTimeout(() => setRegen(false), 2500);
   }
 
   return (
     <div style={{ padding:24, maxWidth:1400, margin:"0 auto" }}>
       {/* Top actions */}
       <div style={{ display:"flex", justifyContent:"flex-end", gap:10, marginBottom:20 }}>
-        <button onClick={handleRegenerate} className="btn-secondary">
-          <RefreshCw size={15}/> Auto-generate
+        <button onClick={handleRegenerate} className={regen ? "btn-primary" : "btn-secondary"}>
+          <RefreshCw size={15}/> {regen ? "Regenerated ✓" : "Auto-generate"}
         </button>
         <button onClick={handleSave} className="btn-primary">
           <Save size={15}/> {saved ? "Saved ✓" : "Save"}
@@ -296,9 +299,9 @@ export default function ProjectPage() {
                 </div>
               ))}
             </div>
-            <button onClick={handleRegenerate} className="btn-secondary"
+            <button onClick={handleRegenerate} className={regen ? "btn-primary" : "btn-secondary"}
               style={{ width:"100%", justifyContent:"center", marginTop:14 }}>
-              <RefreshCw size={14}/> Regenerate Schedule & BOQ
+              <RefreshCw size={14}/> {regen ? "Regenerated ✓" : "Regenerate Schedule & BOQ"}
             </button>
           </div>
         </div>

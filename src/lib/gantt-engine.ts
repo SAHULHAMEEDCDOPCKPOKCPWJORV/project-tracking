@@ -1,5 +1,5 @@
 import { GanttTask, WBSNode, ProjectDetails, BOQItem } from "./store";
-import { addDays, formatDate } from "./utils";
+import { addDays, formatDate, daysBetween } from "./utils";
 
 function makeTask(
   id: string, wbsId: string, name: string, startDate: Date, duration: number,
@@ -22,106 +22,78 @@ function makeTask(
 
 export function generateGanttTasks(project: ProjectDetails): GanttTask[] {
   const base = new Date(project.startDate + "T00:00:00");
-  const floors = project.numFloors;
+  const end = new Date(project.endDate + "T00:00:00");
+  const totalDays = Math.max(daysBetween(base, end) || 0, 30); // minimum 30 days
+  const floors = Number(project.numFloors) || 1;
   const tasks: GanttTask[] = [];
 
-  // ─── Phase 1: Pre-Construction ─────────────────────────────────────────
-  tasks.push(makeTask("T001","1.0","Notice to Proceed",base,1,[],
-    "completed",100,true,"PM",0,undefined,"Pre-Construction"));
-  tasks.push(makeTask("T002","1.1","Project Kickoff",addDays(base,1),2,["T001"],
-    "completed",100,false,"PM",1,"T001","Pre-Construction"));
-  tasks.push(makeTask("T003","1.2","Site Survey & Layout",addDays(base,3),5,["T002"],
-    "completed",100,false,"Surveyor",1,"T001","Pre-Construction"));
-  tasks.push(makeTask("T004","1.3","Site Mobilization",addDays(base,8),8,["T003"],
-    "in-progress",60,false,"Contractor",1,"T001","Pre-Construction"));
+  const preDays = Math.max(1, Math.round(totalDays * 0.05));
+  const earthDays = Math.max(2, Math.round(totalDays * 0.10));
+  const foundDays = Math.max(3, Math.round(totalDays * 0.15));
+  const superDays = Math.max(5, Math.round(totalDays * 0.40));
+  const finDays = Math.max(5, Math.round(totalDays * 0.20));
+  const closeDays = Math.max(2, Math.round(totalDays * 0.10));
 
-  // ─── Phase 2: Earthwork ────────────────────────────────────────────────
-  const earthBase = addDays(base, 16);
-  tasks.push(makeTask("T005","2.0","Site Clearing & Excavation",earthBase,10,["T004"],
-    "in-progress",40,false,"Earthwork",0,undefined,"Earthwork"));
-  tasks.push(makeTask("T006","2.1","Shoring & Dewatering",addDays(earthBase,10),5,["T005"],
-    "not-started",0,false,"Civil",1,"T005","Earthwork"));
+  // Pre-Construction (preDays)
+  tasks.push(makeTask("T001","1.0","Notice to Proceed",base,1,[],"completed",100,true,"PM",0,undefined,"Pre-Construction"));
+  tasks.push(makeTask("T002","1.1","Project Kickoff",addDays(base,1),Math.max(1, Math.round(preDays*0.2)),["T001"],"completed",100,false,"PM",1,"T001","Pre-Construction"));
+  tasks.push(makeTask("T003","1.2","Site Survey & Layout",addDays(base,3),Math.max(1, Math.round(preDays*0.3)),["T002"],"completed",100,false,"Surveyor",1,"T001","Pre-Construction"));
+  tasks.push(makeTask("T004","1.3","Site Mobilization",addDays(base,8),Math.max(1, Math.round(preDays*0.5)),["T003"],"in-progress",60,false,"Contractor",1,"T001","Pre-Construction"));
 
-  // ─── Phase 3: Foundation ───────────────────────────────────────────────
-  const foundBase = addDays(base, 31);
-  tasks.push(makeTask("T007","3.0","PCC & Foundation Bed",foundBase,5,["T006"],
-    "not-started",0,false,"Civil",0,undefined,"Foundation"));
-  tasks.push(makeTask("T008","3.1","Raft / Footing RCC",addDays(foundBase,5),14,["T007"],
-    "not-started",0,false,"Structural",1,"T007","Foundation"));
-  tasks.push(makeTask("T009","3.2","Plinth Beam & Backfill",addDays(foundBase,19),5,["T008"],
-    "not-started",0,false,"Civil",1,"T007","Foundation"));
-  tasks.push(makeTask("T010","3.3","Foundation Complete",addDays(foundBase,24),1,["T009"],
-    "not-started",0,true,"PM",0,undefined,"Foundation"));
+  // Earthwork
+  const earthBase = addDays(base, preDays);
+  tasks.push(makeTask("T005","2.0","Site Clearing & Excavation",earthBase,Math.max(1, Math.round(earthDays*0.6)),["T004"],"in-progress",40,false,"Earthwork",0,undefined,"Earthwork"));
+  tasks.push(makeTask("T006","2.1","Shoring & Dewatering",addDays(earthBase,Math.round(earthDays*0.6)),Math.max(1, Math.round(earthDays*0.4)),["T005"],"not-started",0,false,"Civil",1,"T005","Earthwork"));
 
-  // ─── Phase 4: Superstructure (per floor) ──────────────────────────────
-  let prevEnd = addDays(foundBase, 25);
+  // Foundation
+  const foundBase = addDays(earthBase, earthDays);
+  tasks.push(makeTask("T007","3.0","PCC & Foundation Bed",foundBase,Math.max(1, Math.round(foundDays*0.2)),["T006"],"not-started",0,false,"Civil",0,undefined,"Foundation"));
+  tasks.push(makeTask("T008","3.1","Raft / Footing RCC",addDays(foundBase,Math.round(foundDays*0.2)),Math.max(1, Math.round(foundDays*0.5)),["T007"],"not-started",0,false,"Structural",1,"T007","Foundation"));
+  tasks.push(makeTask("T009","3.2","Plinth Beam & Backfill",addDays(foundBase,Math.round(foundDays*0.7)),Math.max(1, Math.round(foundDays*0.3)),["T008"],"not-started",0,false,"Civil",1,"T007","Foundation"));
+  tasks.push(makeTask("T010","3.3","Foundation Complete",addDays(foundBase,foundDays),1,["T009"],"not-started",0,true,"PM",0,undefined,"Foundation"));
+
+  // Superstructure
+  const floorDays = Math.max(4, Math.round(superDays / Math.max(1, floors + 1))); // +1 for Ground
+  let prevEnd = addDays(foundBase, foundDays);
   const floorTaskIds: string[] = [];
-  for (let f = 1; f <= floors; f++) {
+  
+  for (let f = 0; f <= floors; f++) {
     const fBase = new Date(prevEnd);
+    const fl = f === 0 ? "Ground Floor" : `Floor ${f}`;
     const colId = `T${100 + f * 10}`;
     const beamId = `T${101 + f * 10}`;
     const slabId = `T${102 + f * 10}`;
     const curingId = `T${103 + f * 10}`;
-    const pred = f === 1 ? ["T010"] : [floorTaskIds[floorTaskIds.length - 1]];
+    const pred = f === 0 ? ["T010"] : [floorTaskIds[floorTaskIds.length - 1]];
 
-    tasks.push(makeTask(colId, `4.${f}.1`, `Floor ${f} – Columns`, fBase, 7, pred,
-      "not-started", 0, false, "Structural", 0, undefined, `Floor ${f}`));
-    tasks.push(makeTask(beamId, `4.${f}.2`, `Floor ${f} – Beams & Slab Shuttering`, addDays(fBase,7), 7, [colId],
-      "not-started", 0, false, "Carpenter", 1, colId, `Floor ${f}`));
-    tasks.push(makeTask(slabId, `4.${f}.3`, `Floor ${f} – Slab RCC Pour`, addDays(fBase,14), 4, [beamId],
-      "not-started", 0, false, "Structural", 1, colId, `Floor ${f}`));
-    tasks.push(makeTask(curingId, `4.${f}.4`, `Floor ${f} – Curing`, addDays(fBase,18), 5, [slabId],
-      "not-started", 0, false, "Labour", 1, colId, `Floor ${f}`));
+    tasks.push(makeTask(colId, `4.${f}.1`, `${fl} – Columns`, fBase, Math.max(1, Math.round(floorDays*0.3)), pred,"not-started", 0, false, "Structural", 0, undefined, fl));
+    tasks.push(makeTask(beamId, `4.${f}.2`, `${fl} – Beams & Slab Shuttering`, addDays(fBase,Math.round(floorDays*0.3)), Math.max(1, Math.round(floorDays*0.3)), [colId],"not-started", 0, false, "Carpenter", 1, colId, fl));
+    tasks.push(makeTask(slabId, `4.${f}.3`, `${fl} – Slab RCC Pour`, addDays(fBase,Math.round(floorDays*0.6)), Math.max(1, Math.round(floorDays*0.1)), [beamId],"not-started", 0, false, "Structural", 1, colId, fl));
+    tasks.push(makeTask(curingId, `4.${f}.4`, `${fl} – Curing`, addDays(fBase,Math.round(floorDays*0.7)), Math.max(1, Math.round(floorDays*0.3)), [slabId],"not-started", 0, false, "Labour", 1, colId, fl));
 
-    prevEnd = addDays(fBase, 23);
+    prevEnd = addDays(fBase, floorDays);
     floorTaskIds.push(curingId);
   }
 
-  // ─── Structural Milestone ──────────────────────────────────────────────
   tasks.push(makeTask("T_SW","5.0","Structural Works Complete",prevEnd,1,
     [floorTaskIds[floorTaskIds.length - 1]],"not-started",0,true,"PM",0,undefined,"Milestone"));
 
-  // ─── Phase 5: MEP & Finishes ───────────────────────────────────────────
+  // Finishes
   const finBase = new Date(prevEnd);
-  tasks.push(makeTask("T_F1","6.1","Brickwork (All Floors)",addDays(finBase,1),30,["T_SW"],
-    "not-started",0,false,"Masonry",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F2","6.2","Electrical Conduing",addDays(finBase,15),20,["T_F1"],
-    "not-started",0,false,"Electrician",0,undefined,"MEP"));
-  tasks.push(makeTask("T_F3","6.3","Plumbing Rough-in",addDays(finBase,15),20,["T_F1"],
-    "not-started",0,false,"Plumber",0,undefined,"MEP"));
-  tasks.push(makeTask("T_F4","6.4","External Plastering",addDays(finBase,20),25,["T_F1"],
-    "not-started",0,false,"Masonry",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F5","6.5","Internal Plastering",addDays(finBase,30),25,["T_F1"],
-    "not-started",0,false,"Masonry",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F6","6.6","Flooring & Tiling",addDays(finBase,55),20,["T_F5"],
-    "not-started",0,false,"Tiler",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F7","6.7","Doors & Windows",addDays(finBase,55),15,["T_F5"],
-    "not-started",0,false,"Carpenter",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F8","6.8","External Roadway & Landscape",addDays(finBase,55),20,["T_F4"],
-    "not-started",0,false,"Civil",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F9","6.9","Water Tank & Overhead Tank",addDays(finBase,60),12,["T_F3"],
-    "not-started",0,false,"Plumber",0,undefined,"MEP"));
-  tasks.push(makeTask("T_F10","6.10","Septic Tank & Sewage",addDays(finBase,60),10,["T_F3"],
-    "not-started",0,false,"Plumber",0,undefined,"MEP"));
-  tasks.push(makeTask("T_F11","6.11","Internal Painting & Polish",addDays(finBase,75),15,["T_F6"],
-    "not-started",0,false,"Painter",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F12","6.12","External Painting",addDays(finBase,75),15,["T_F6"],
-    "not-started",0,false,"Painter",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F13","6.13","Compound Wall & Gates",addDays(finBase,65),12,["T_F8"],
-    "not-started",0,false,"Civil",0,undefined,"Finishes"));
-  tasks.push(makeTask("T_F14","6.14","Electrical Fixtures",addDays(finBase,80),10,["T_F2"],
-    "not-started",0,false,"Electrician",0,undefined,"MEP"));
-  tasks.push(makeTask("T_F15","6.15","Plumbing Fixtures",addDays(finBase,80),10,["T_F3"],
-    "not-started",0,false,"Plumber",0,undefined,"MEP"));
-
-  // ─── Phase 6: Closeout ─────────────────────────────────────────────────
-  const closeBase = addDays(finBase, 95);
-  tasks.push(makeTask("T_C1","7.1","Snagging & Defect Rectification",closeBase,10,
-    ["T_F11","T_F12","T_F14","T_F15"],"not-started",0,false,"QA",0,undefined,"Closeout"));
-  tasks.push(makeTask("T_C2","7.2","Final Inspection",addDays(closeBase,10),5,["T_C1"],
-    "not-started",0,false,"PM",0,undefined,"Closeout"));
-  tasks.push(makeTask("T_C3","7.3","Handover & Substantial Completion",addDays(closeBase,15),1,["T_C2"],
-    "not-started",0,true,"PM",0,undefined,"Milestone"));
+  tasks.push(makeTask("T_F1","6.1","Brickwork (All Floors)",finBase,Math.max(1, Math.round(finDays*0.3)),["T_SW"],"not-started",0,false,"Masonry",0,undefined,"Finishes"));
+  tasks.push(makeTask("T_F2","6.2","Electrical Conduing",addDays(finBase,Math.round(finDays*0.1)),Math.max(1, Math.round(finDays*0.2)),["T_F1"],"not-started",0,false,"Electrician",0,undefined,"MEP"));
+  tasks.push(makeTask("T_F3","6.3","Plumbing Rough-in",addDays(finBase,Math.round(finDays*0.1)),Math.max(1, Math.round(finDays*0.2)),["T_F1"],"not-started",0,false,"Plumber",0,undefined,"MEP"));
+  tasks.push(makeTask("T_F4","6.4","External Plastering",addDays(finBase,Math.round(finDays*0.3)),Math.max(1, Math.round(finDays*0.25)),["T_F1"],"not-started",0,false,"Masonry",0,undefined,"Finishes"));
+  tasks.push(makeTask("T_F5","6.5","Internal Plastering",addDays(finBase,Math.round(finDays*0.4)),Math.max(1, Math.round(finDays*0.25)),["T_F1"],"not-started",0,false,"Masonry",0,undefined,"Finishes"));
+  tasks.push(makeTask("T_F6","6.6","Flooring & Tiling",addDays(finBase,Math.round(finDays*0.6)),Math.max(1, Math.round(finDays*0.2)),["T_F5"],"not-started",0,false,"Tiler",0,undefined,"Finishes"));
+  tasks.push(makeTask("T_F7","6.7","Doors & Windows",addDays(finBase,Math.round(finDays*0.6)),Math.max(1, Math.round(finDays*0.15)),["T_F5"],"not-started",0,false,"Carpenter",0,undefined,"Finishes"));
+  tasks.push(makeTask("T_F8","6.8","Painting & Polish",addDays(finBase,Math.round(finDays*0.8)),Math.max(1, Math.round(finDays*0.2)),["T_F6"],"not-started",0,false,"Painter",0,undefined,"Finishes"));
+  
+  // Closeout
+  const closeBase = addDays(finBase, finDays);
+  tasks.push(makeTask("T_C1","7.1","Snagging & Defect Rectification",closeBase,Math.max(1, Math.round(closeDays*0.6)),["T_F8"],"not-started",0,false,"QA",0,undefined,"Closeout"));
+  tasks.push(makeTask("T_C2","7.2","Final Inspection",addDays(closeBase,Math.round(closeDays*0.6)),Math.max(1, Math.round(closeDays*0.3)),["T_C1"],"not-started",0,false,"PM",0,undefined,"Closeout"));
+  tasks.push(makeTask("T_C3","7.3","Handover & Substantial Completion",addDays(closeBase,Math.round(closeDays*0.9)),1,["T_C2"],"not-started",0,true,"PM",0,undefined,"Milestone"));
 
   return computeCPM(tasks);
 }
@@ -184,8 +156,12 @@ export function buildWBSNodes(tasks: GanttTask[]): WBSNode[] {
 }
 
 export function generateBOQ(project: ProjectDetails, materials: any[] = [], labourRates: any[] = []): BOQItem[] {
-  const { totalBuiltUpArea, numFloors, costPerSqft, gstPercentage } = project;
-  const floorArea = totalBuiltUpArea / (numFloors + 1);
+  const totalBuiltUpArea = Number(project.totalBuiltUpArea) || 1000;
+  const numFloors = Number(project.numFloors) || 1;
+  const costPerSqft = Number(project.costPerSqft) || 2000;
+  const gstPercentage = Number(project.gstPercentage) || 18;
+  const targetBudget = totalBuiltUpArea * costPerSqft;
+
   const items: BOQItem[] = [];
   let counter = 1;
 
@@ -199,20 +175,20 @@ export function generateBOQ(project: ProjectDetails, materials: any[] = [], labo
     return lab ? lab.dailyRate : defaultPrice;
   };
 
-  const add = (floor: string, category: string, description: string, unit: string, qty: number, rate: number, wastage = 5, matQuery = "", labQuery = "") => {
+  const add = (floor: string, category: string, description: string, unit: string, baseRate: number, targetAmount: number, matQuery = "", labQuery = "") => {
     
-    // dynamically adjust rate based on materials & labour if provided
-    let finalRate = rate;
+    let finalRate = baseRate;
     if (matQuery || labQuery) {
-      let mCost = matQuery ? getMatPrice(matQuery, rate * 0.6) : rate * 0.6;
-      let lCost = labQuery ? getLabPrice(labQuery, rate * 0.3) : rate * 0.3;
-      // Some simple heuristic to fit into a per-unit rate
+      let mCost = matQuery ? getMatPrice(matQuery, baseRate * 0.6) : baseRate * 0.6;
+      let lCost = labQuery ? getLabPrice(labQuery, baseRate * 0.3) : baseRate * 0.3;
       if (unit === "Cum" || unit === "Sqm" || unit === "MT") {
-        finalRate = mCost + (lCost / 8); // simplified
+        finalRate = mCost + (lCost / 8); 
       }
     }
 
-    const amount = qty * finalRate;
+    const qty = targetAmount / finalRate;
+    const amount = targetAmount;
+    
     const material = amount * 0.6;
     const labour = amount * 0.3;
     const equipment = amount * 0.1;
@@ -224,74 +200,72 @@ export function generateBOQ(project: ProjectDetails, materials: any[] = [], labo
     items.push({ 
       id: `BOQ-${counter}`,
       itemNo: `${category.substring(0, 3).toUpperCase()}-${counter}`,
-      floor, 
-      category, 
-      description,
+      floor, category, description,
       specification: "Standard Spec",
       activity: "Construction",
       unit, 
-      quantity: qty, 
-      wastage, 
-      rate: finalRate,
-      amount,
-      contractor: "Main Contractor",
-      vendor: "Local Vendor",
-      material,
-      labour,
-      equipment,
-      overhead,
-      profit,
-      gst,
-      totalCost,
+      quantity: Number(qty.toFixed(2)), 
+      wastage: 5, 
+      rate: Number(finalRate.toFixed(2)),
+      amount: Number(amount.toFixed(2)),
+      contractor: "Main Contractor", vendor: "Local Vendor",
+      material, labour, equipment, overhead, profit, gst, totalCost,
       remarks: ""
     });
     counter++;
   };
 
-  // Foundation items
-  add("Foundation","Earthwork","Excavation for Footing","Cum", floorArea * 0.3, 250, 0, "", "Helper");
-  add("Foundation","PCC","PCC M10 (1:3:6)","Cum", floorArea * 0.05, 5500, 3, "Cement", "Mason");
-  add("Foundation","RCC","RCC M25 – Footings","Cum", floorArea * 0.12, 7200, 5, "Cement", "Mason");
-  add("Foundation","Steel","TMT Steel Fe500 – Footings","MT", floorArea * 0.012, 72000, 5, "Steel", "Steel Fixer");
-  add("Foundation","Formwork","Shuttering for Footings","Sqm", floorArea * 0.8, 450, 5, "Wood", "Carpenter");
-  add("Foundation","Masonry","Plinth Beam","Cum", floorArea * 0.04, 7500, 5, "Cement", "Mason");
-  add("Foundation","Backfill","Backfilling & Compaction","Cum", floorArea * 0.2, 200, 0, "", "Helper");
+  // Target budget allocations
+  const bFound = targetBudget * 0.15;
+  const bSuper = targetBudget * 0.35;
+  const bFin = targetBudget * 0.25;
+  const bMEP = targetBudget * 0.15;
+  const bSite = targetBudget * 0.10;
 
+  // Foundation (15%)
+  add("Foundation","Earthwork","Excavation for Footing","Cum", 250, bFound * 0.10, "", "Helper");
+  add("Foundation","PCC","PCC M10 (1:3:6)","Cum", 5500, bFound * 0.15, "Cement", "Mason");
+  add("Foundation","RCC","RCC M25 – Footings","Cum", 7200, bFound * 0.35, "Cement", "Mason");
+  add("Foundation","Steel","TMT Steel Fe500 – Footings","MT", 72000, bFound * 0.25, "Steel", "Steel Fixer");
+  add("Foundation","Formwork","Shuttering for Footings","Sqm", 450, bFound * 0.10, "Wood", "Carpenter");
+  add("Foundation","Backfill","Backfilling & Compaction","Cum", 200, bFound * 0.05, "", "Helper");
+
+  // Superstructure (35%)
+  const bSuperFloor = bSuper / (numFloors + 1);
   for (let f = 0; f <= numFloors; f++) {
-    const floorLabel = f === 0 ? "Ground Floor" : `Floor ${f}`;
-    add(floorLabel,"RCC","RCC M25 – Columns","Cum", floorArea * 0.04, 8000, 5, "Cement", "Mason");
-    add(floorLabel,"RCC","RCC M25 – Beams","Cum", floorArea * 0.06, 8000, 5, "Cement", "Mason");
-    add(floorLabel,"RCC","RCC M25 – Slab","Cum", floorArea * 0.12, 7500, 5, "Cement", "Mason");
-    add(floorLabel,"Steel","TMT Steel Fe500 – Columns","MT", floorArea * 0.005, 72000, 5, "Steel", "Steel Fixer");
-    add(floorLabel,"Steel","TMT Steel Fe500 – Beams","MT", floorArea * 0.007, 72000, 5, "Steel", "Steel Fixer");
-    add(floorLabel,"Steel","TMT Steel Fe500 – Slab","MT", floorArea * 0.009, 72000, 5, "Steel", "Steel Fixer");
-    add(floorLabel,"Formwork","Shuttering – Columns","Sqm", floorArea * 0.5, 450, 5, "Wood", "Carpenter");
-    add(floorLabel,"Formwork","Shuttering – Beams & Slab","Sqm", floorArea * 1.2, 420, 5, "Wood", "Carpenter");
-    add(floorLabel,"Masonry","Brickwork 230mm (Ext)","Sqm", floorArea * 0.35, 320, 10, "Bricks", "Mason");
-    add(floorLabel,"Masonry","Brickwork 115mm (Int)","Sqm", floorArea * 0.5, 280, 10, "Bricks", "Mason");
-    add(floorLabel,"Plaster","Cement Plaster 12mm (Ext)","Sqm", floorArea * 0.9, 85, 10, "Cement", "Mason");
-    add(floorLabel,"Plaster","Cement Plaster 12mm (Int)","Sqm", floorArea * 1.8, 75, 10, "Cement", "Mason");
-    add(floorLabel,"Flooring","Vitrified Tile 600×600","Sqm", floorArea * 0.95, 750, 5, "Tiles", "Mason");
-    add(floorLabel,"Flooring","Skirting Tile","Rmt", floorArea * 0.3, 120, 5, "Tiles", "Mason");
-    add(floorLabel,"Doors","Teak Wood Door Frame + Shutter","No", Math.max(1, Math.round(floorArea / 200)), 18000, 3, "Wood", "Carpenter");
-    add(floorLabel,"Windows","UPVC Sliding Window","No", Math.max(2, Math.round(floorArea / 150)), 8500, 3, "Glass", "Carpenter");
-    add(floorLabel,"Painting","Interior Emulsion Paint","Sqm", floorArea * 1.8, 55, 5, "Paint", "Painter");
-    add(floorLabel,"Painting","Exterior Texture Paint","Sqm", floorArea * 0.5, 120, 5, "Paint", "Painter");
-    add(floorLabel,"Electrical","Electrical Wiring (Full)","Point", Math.round(floorArea / 15), 650, 5, "Electrical", "Electrician");
-    add(floorLabel,"Electrical","MCB Distribution Board","No", 1, 4500, 2, "Electrical", "Electrician");
-    add(floorLabel,"Electrical","Light Fixtures","No", Math.round(floorArea / 20), 850, 5, "Electrical", "Electrician");
-    add(floorLabel,"Electrical","Power Sockets","No", Math.round(floorArea / 25), 350, 5, "Electrical", "Electrician");
-    add(floorLabel,"Plumbing","CPVC Pipe 25mm","Rmt", floorArea * 0.4, 180, 10, "Plumbing", "Plumber");
-    add(floorLabel,"Plumbing","PVC Drain 110mm","Rmt", floorArea * 0.3, 220, 10, "Plumbing", "Plumber");
-    add(floorLabel,"Plumbing","Sanitary Ware Set","No", Math.max(1, Math.round(floorArea / 300)), 22000, 3, "Plumbing", "Plumber");
+    const fl = f === 0 ? "Ground Floor" : `Floor ${f}`;
+    add(fl,"RCC","RCC M25 – Columns","Cum", 8000, bSuperFloor * 0.20, "Cement", "Mason");
+    add(fl,"RCC","RCC M25 – Beams & Slab","Cum", 7500, bSuperFloor * 0.35, "Cement", "Mason");
+    add(fl,"Steel","TMT Steel Fe500 – Columns","MT", 72000, bSuperFloor * 0.20, "Steel", "Steel Fixer");
+    add(fl,"Steel","TMT Steel Fe500 – Beams/Slab","MT", 72000, bSuperFloor * 0.15, "Steel", "Steel Fixer");
+    add(fl,"Formwork","Shuttering","Sqm", 450, bSuperFloor * 0.10, "Wood", "Carpenter");
   }
 
-  // Site Works
-  add("Site Works","Water Tank","Overhead Water Tank 1000L","No", 1, 15000, 2, "Tank", "Plumber");
-  add("Site Works","Septic","Septic Tank (Brick)","No", 1, 45000, 3, "Bricks", "Mason");
-  add("Site Works","Compound","Compound Wall (1.8m)","Rmt", Math.sqrt(totalBuiltUpArea) * 4, 1200, 5, "Bricks", "Mason");
-  add("Site Works","Compound","Main Gate (MS)","No", 1, 35000, 3, "Steel", "Welder");
-  add("Site Works","Landscape","External Paving","Sqm", totalBuiltUpArea * 0.3, 280, 5, "Tiles", "Mason");
+  // Finishes (25%)
+  const bFinFloor = bFin / (numFloors + 1);
+  for (let f = 0; f <= numFloors; f++) {
+    const fl = f === 0 ? "Ground Floor" : `Floor ${f}`;
+    add(fl,"Masonry","Brickwork (Ext & Int)","Sqm", 320, bFinFloor * 0.25, "Bricks", "Mason");
+    add(fl,"Plaster","Cement Plastering","Sqm", 85, bFinFloor * 0.15, "Cement", "Mason");
+    add(fl,"Flooring","Vitrified Tile Flooring","Sqm", 750, bFinFloor * 0.25, "Tiles", "Mason");
+    add(fl,"Doors/Windows","Doors & UPVC Windows","No", 15000, bFinFloor * 0.25, "Wood", "Carpenter");
+    add(fl,"Painting","Interior & Exterior Paint","Sqm", 60, bFinFloor * 0.10, "Paint", "Painter");
+  }
+
+  // MEP (15%)
+  const bMEPFloor = bMEP / (numFloors + 1);
+  for (let f = 0; f <= numFloors; f++) {
+    const fl = f === 0 ? "Ground Floor" : `Floor ${f}`;
+    add(fl,"Electrical","Wiring & Conduits","Point", 650, bMEPFloor * 0.30, "Electrical", "Electrician");
+    add(fl,"Electrical","Fixtures & DBs","No", 1500, bMEPFloor * 0.20, "Electrical", "Electrician");
+    add(fl,"Plumbing","Pipes & Drainage","Rmt", 200, bMEPFloor * 0.20, "Plumbing", "Plumber");
+    add(fl,"Plumbing","Sanitary Ware","No", 15000, bMEPFloor * 0.30, "Plumbing", "Plumber");
+  }
+
+  // Site Works (10%)
+  add("Site Works","Compound","Compound Wall & Gate","Rmt", 1200, bSite * 0.40, "Bricks", "Mason");
+  add("Site Works","Landscape","External Paving","Sqm", 280, bSite * 0.30, "Tiles", "Mason");
+  add("Site Works","Utilities","Water Tank & Septic","No", 25000, bSite * 0.30, "Tank", "Plumber");
 
   return items;
 }
